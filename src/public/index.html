@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Namma Bhoomi Report</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <section class="workspace">
+        <header class="topbar">
+          <div class="brand">
+            <img src="/srisatvam-logo.png" alt="Sri SatVam logo">
+            <div>
+              <p class="eyebrow">Sri SatVam Bhoomi Data Reader</p>
+              <h1>Namma Bhoomi Report</h1>
+            </div>
+          </div>
+          <button id="restart" class="icon-button" title="Start a fresh search" aria-label="Start a fresh search">
+            <span aria-hidden="true">↻</span>
+          </button>
+        </header>
+
+        <form id="recordForm" class="form-grid">
+          <label>
+            <span>District</span>
+            <select id="district" required></select>
+          </label>
+          <label>
+            <span>Taluk</span>
+            <select id="taluk" required></select>
+          </label>
+          <label>
+            <span>Hobli</span>
+            <select id="hobli" required></select>
+          </label>
+          <label>
+            <span>Village</span>
+            <select id="village" required></select>
+          </label>
+          <label>
+            <span>Survey number</span>
+            <input id="survey" inputmode="numeric" maxlength="4" placeholder="Example: 12" required>
+          </label>
+          <div class="action-slot">
+            <button id="go" type="button">Load Surnoc</button>
+          </div>
+          <label>
+            <span>Surnoc</span>
+            <select id="surnoc" required></select>
+          </label>
+          <label>
+            <span>Hissa No</span>
+            <select id="hissa" required></select>
+          </label>
+          <label class="wide hidden-field">
+            <span>Period</span>
+            <select id="period" required></select>
+          </label>
+          <fieldset class="feature-options wide">
+            <legend>Report sections</legend>
+            <div class="feature-actions" aria-label="Report section shortcuts">
+              <button id="selectAllSections" type="button">Select all</button>
+              <button id="clearAllSections" type="button">Clear all</button>
+            </div>
+            <label><input type="checkbox" name="reportSection" value="currentRtc" checked><span>New RTC</span></label>
+            <label><input type="checkbox" name="reportSection" value="oldRtc" checked><span>Old RTCs</span></label>
+            <label><input type="checkbox" name="reportSection" value="khatha" checked><span>Khatha Number</span></label>
+            <label><input type="checkbox" name="reportSection" value="advancedDetails" checked><span>Advanced Details</span></label>
+            <label><input type="checkbox" name="reportSection" value="mutationStatus" checked><span>MR Status</span></label>
+            <label><input type="checkbox" name="reportSection" value="mutationRecords" checked><span>Mutation Records</span></label>
+            <label><input type="checkbox" name="reportSection" value="ownershipMap" checked><span>Ownership Map</span></label>
+            <label><input type="checkbox" name="reportSection" value="akarband" checked><span>Akarband</span></label>
+            <label><input type="checkbox" name="reportSection" value="echawadi" checked><span>eChawadi</span></label>
+          </fieldset>
+          <div class="action-slot">
+            <button id="fetch" type="submit">Fetch details</button>
+          </div>
+          <div class="action-slot wide">
+            <button id="report" type="button">Build dashboard report</button>
+          </div>
+        </form>
+      </section>
+
+      <aside class="side">
+        <div class="status-panel">
+          <div class="status-row">
+            <span>Status</span>
+            <strong id="status">Starting...</strong>
+          </div>
+          <div class="status-row">
+            <span>Source</span>
+            <a href="https://landrecords.karnataka.gov.in/Service2/" target="_blank" rel="noreferrer">Official Bhoomi service</a>
+          </div>
+        </div>
+
+        <section class="result">
+          <h2>Quick record</h2>
+          <div id="summary" class="summary"></div>
+          <div id="resultHtml" class="official-result"></div>
+        </section>
+      </aside>
+
+      <section class="dashboard">
+        <div class="dashboard-head">
+          <div class="brand report-brand">
+            <img src="/srisatvam-logo.png" alt="Sri SatVam logo">
+            <div>
+            <p class="eyebrow">Compiled report</p>
+            <h2>Dashboard summary</h2>
+            </div>
+          </div>
+          <button id="print" type="button">Download Report</button>
+        </div>
+        <div id="reportOutput" class="report-output"></div>
+      </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
