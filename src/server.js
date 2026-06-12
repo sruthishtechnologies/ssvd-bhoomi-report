@@ -1542,11 +1542,17 @@ async function renderPdfPreview(buffer, filename) {
   try {
     const pdfPath = join(tempDir, filename);
     await writeFile(pdfPath, buffer);
-    await runCommand("/usr/bin/qlmanage", ["-t", "-s", "1800", "-o", tempDir, pdfPath]);
-    const files = await readdir(tempDir);
-    const previewFile = files.find((file) => file.endsWith(".png") && file.includes(filename));
-    if (!previewFile) throw new Error("Akarband preview image was not produced");
-    return await readFile(join(tempDir, previewFile));
+    if (process.platform === "darwin") {
+      await runCommand("/usr/bin/qlmanage", ["-t", "-s", "1800", "-o", tempDir, pdfPath]);
+      const files = await readdir(tempDir);
+      const previewFile = files.find((file) => file.endsWith(".png") && file.includes(filename));
+      if (!previewFile) throw new Error("Akarband preview image was not produced");
+      return await readFile(join(tempDir, previewFile));
+    }
+
+    const previewPrefix = join(tempDir, "preview");
+    await runCommand("pdftoppm", ["-png", "-singlefile", "-r", "180", pdfPath, previewPrefix]);
+    return await readFile(`${previewPrefix}.png`);
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
