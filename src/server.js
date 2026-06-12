@@ -2447,24 +2447,11 @@ async function readJson(req) {
 async function handleApi(req, res) {
   try {
     if (req.method === "GET" && req.url === "/api/health") {
-      try {
-        const response = await officialFetch(BHOOMI_URL, { timeoutMs: 15000, retries: 0 }, "Bhoomi Service2");
-        json(res, 200, {
-          ok: response.ok,
-          service: "Bhoomi Service2",
-          status: response.status,
-          url: BHOOMI_URL,
-          proxyConfigured: Boolean(OFFICIAL_PROXY_URL),
-        });
-      } catch (error) {
-        json(res, 503, {
-          ok: false,
-          service: "Bhoomi Service2",
-          url: BHOOMI_URL,
-          proxyConfigured: Boolean(OFFICIAL_PROXY_URL),
-          error: error.message,
-        });
-      }
+      json(res, 200, {
+        ok: true,
+        service: "Namma Bhoomi Report",
+        proxyConfigured: Boolean(OFFICIAL_PROXY_URL),
+      });
       return;
     }
 
