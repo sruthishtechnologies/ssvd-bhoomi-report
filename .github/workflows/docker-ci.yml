@@ -12,11 +12,13 @@ on:
 
 permissions:
   contents: read
+  id-token: write
   packages: write
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  ECR_REPOSITORY: ssvd-bhoomi-report
 
 jobs:
   quality:
@@ -59,6 +61,7 @@ jobs:
           echo "ci_tag=${IMAGE}:ci-${GITHUB_SHA}" >> "${GITHUB_OUTPUT}"
           echo "sha_tag=${IMAGE}:sha-${GITHUB_SHA}" >> "${GITHUB_OUTPUT}"
           echo "ref_tag=${IMAGE}:${REF_TAG}" >> "${GITHUB_OUTPUT}"
+          echo "ref_tag_name=${REF_TAG}" >> "${GITHUB_OUTPUT}"
 
       - name: Build Docker image
         run: docker build -t "${{ steps.vars.outputs.ci_tag }}" .
@@ -105,3 +108,35 @@ jobs:
         run: |
           docker push "${{ steps.vars.outputs.sha_tag }}"
           docker push "${{ steps.vars.outputs.ref_tag }}"
+
+      - name: Configure AWS credentials with OIDC
+        if: github.event_name == 'push' && vars.AWS_REGION != '' && vars.AWS_ROLE_TO_ASSUME != ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
+
+      - name: Configure AWS credentials with access keys
+        if: github.event_name == 'push' && vars.AWS_REGION != '' && vars.AWS_ROLE_TO_ASSUME == ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Log in to Amazon ECR
+        if: github.event_name == 'push' && vars.AWS_REGION != ''
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Push Docker image tags to Amazon ECR
+        if: github.event_name == 'push' && vars.AWS_REGION != ''
+        env:
+          ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+        run: |
+          ECR_SHA_TAG="${ECR_REGISTRY}/${ECR_REPOSITORY}:sha-${GITHUB_SHA}"
+          ECR_REF_TAG="${ECR_REGISTRY}/${ECR_REPOSITORY}:${{ steps.vars.outputs.ref_tag_name }}"
+          docker tag "${{ steps.vars.outputs.ci_tag }}" "${ECR_SHA_TAG}"
+          docker tag "${{ steps.vars.outputs.ci_tag }}" "${ECR_REF_TAG}"
+          docker push "${ECR_SHA_TAG}"
+          docker push "${ECR_REF_TAG}"
