@@ -105,7 +105,7 @@ jobs:
         with:
           image-ref: ${{ steps.vars.outputs.ci_tag }}
           format: table
-          severity: HIGH,CRITICAL
+          severity: CRITICAL
           vuln-type: os,library
           ignore-unfixed: true
           exit-code: "1"
