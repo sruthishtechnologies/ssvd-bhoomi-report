@@ -180,7 +180,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.OPS_REPO_DISPATCH_TOKEN }}
           DEPLOY_ENVIRONMENT: ${{ vars.DEPLOY_ENVIRONMENT }}
-          IMAGE_TAG: ${{ steps.vars.outputs.ref_tag_name }}
+          IMAGE_TAG: sha-${{ github.sha }}
         run: |
           if [ -z "${GH_TOKEN}" ]; then
             echo "OPS_REPO_DISPATCH_TOKEN is not configured; skipping."
