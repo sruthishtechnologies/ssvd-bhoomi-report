@@ -163,14 +163,10 @@ jobs:
         if: github.event_name == 'push' && vars.AWS_REGION != ''
         env:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
-          REF_TAG_NAME: ${{ steps.vars.outputs.ref_tag_name }}
         run: |
           ECR_SHA_TAG="${ECR_REGISTRY}/${ECR_REPOSITORY}:sha-${GITHUB_SHA}"
-          ECR_REF_TAG="${ECR_REGISTRY}/${ECR_REPOSITORY}:${REF_TAG_NAME}"
           docker tag "${{ steps.vars.outputs.ci_tag }}" "${ECR_SHA_TAG}"
-          docker tag "${{ steps.vars.outputs.ci_tag }}" "${ECR_REF_TAG}"
           docker push "${ECR_SHA_TAG}"
-          docker push "${ECR_REF_TAG}"
 
       - name: Promote ECR image tag to ops repo
         if: >-
