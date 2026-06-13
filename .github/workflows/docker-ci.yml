@@ -1,6 +1,7 @@
+---
 name: Docker CI
 
-on:
+"on":
   push:
     branches:
       - main
@@ -19,6 +20,9 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   ECR_REPOSITORY: ssvd-bhoomi-report
+  OPS_REPO: sruthishtechnologies/ssvd-ops-repo
+  OPS_TEAM: srisatvam
+  OPS_APPLICATION: bhoomi-report
 
 jobs:
   quality:
@@ -27,10 +31,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 20
 
@@ -49,14 +53,18 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Prepare image tags
         id: vars
         shell: bash
         run: |
           IMAGE="${REGISTRY}/${IMAGE_NAME,,}"
-          REF_TAG="$(echo "${GITHUB_REF_NAME}" | tr '/_' '--' | tr -cd '[:alnum:].-')"
+          REF_TAG="$(
+            echo "${GITHUB_REF_NAME}" \
+              | tr '/_' '--' \
+              | tr -cd '[:alnum:].-'
+          )"
           echo "image=${IMAGE}" >> "${GITHUB_OUTPUT}"
           echo "ci_tag=${IMAGE}:ci-${GITHUB_SHA}" >> "${GITHUB_OUTPUT}"
           echo "sha_tag=${IMAGE}:sha-${GITHUB_SHA}" >> "${GITHUB_OUTPUT}"
@@ -69,10 +77,14 @@ jobs:
       - name: Test Docker image
         shell: bash
         run: |
-          docker run --rm -d --name ssvd-bhoomi-report -p 3000:3000 "${{ steps.vars.outputs.ci_tag }}"
+          docker run --rm -d \
+            --name ssvd-bhoomi-report \
+            -p 3000:3000 \
+            "${{ steps.vars.outputs.ci_tag }}"
 
           for attempt in {1..30}; do
-            if curl --fail --silent http://localhost:3000/api/health > /tmp/health.json; then
+            if curl --fail --silent \
+              http://localhost:3000/api/health > /tmp/health.json; then
               cat /tmp/health.json
               break
             fi
@@ -90,10 +102,24 @@ jobs:
         if: always()
         run: docker stop ssvd-bhoomi-report || true
 
+      - name: Scan Docker image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ steps.vars.outputs.ci_tag }}
+          format: table
+          severity: CRITICAL
+          vuln-type: os,library
+          ignore-unfixed: true
+          exit-code: "1"
+
       - name: Tag Docker image
         run: |
-          docker tag "${{ steps.vars.outputs.ci_tag }}" "${{ steps.vars.outputs.sha_tag }}"
-          docker tag "${{ steps.vars.outputs.ci_tag }}" "${{ steps.vars.outputs.ref_tag }}"
+          docker tag \
+            "${{ steps.vars.outputs.ci_tag }}" \
+            "${{ steps.vars.outputs.sha_tag }}"
+          docker tag \
+            "${{ steps.vars.outputs.ci_tag }}" \
+            "${{ steps.vars.outputs.ref_tag }}"
 
       - name: Log in to GitHub Container Registry
         if: github.event_name == 'push'
@@ -110,14 +136,20 @@ jobs:
           docker push "${{ steps.vars.outputs.ref_tag }}"
 
       - name: Configure AWS credentials with OIDC
-        if: github.event_name == 'push' && vars.AWS_REGION != '' && vars.AWS_ROLE_TO_ASSUME != ''
+        if: >-
+          github.event_name == 'push' &&
+          vars.AWS_REGION != '' &&
+          vars.AWS_ROLE_TO_ASSUME != ''
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
 
       - name: Configure AWS credentials with access keys
-        if: github.event_name == 'push' && vars.AWS_REGION != '' && vars.AWS_ROLE_TO_ASSUME == ''
+        if: >-
+          github.event_name == 'push' &&
+          vars.AWS_REGION != '' &&
+          vars.AWS_ROLE_TO_ASSUME == ''
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ vars.AWS_REGION }}
@@ -135,8 +167,32 @@ jobs:
           ECR_REGISTRY: ${{ steps.ecr-login.outputs.registry }}
         run: |
           ECR_SHA_TAG="${ECR_REGISTRY}/${ECR_REPOSITORY}:sha-${GITHUB_SHA}"
-          ECR_REF_TAG="${ECR_REGISTRY}/${ECR_REPOSITORY}:${{ steps.vars.outputs.ref_tag_name }}"
           docker tag "${{ steps.vars.outputs.ci_tag }}" "${ECR_SHA_TAG}"
-          docker tag "${{ steps.vars.outputs.ci_tag }}" "${ECR_REF_TAG}"
           docker push "${ECR_SHA_TAG}"
-          docker push "${ECR_REF_TAG}"
+
+      - name: Promote ECR image tag to ops repo
+        if: >-
+          github.event_name == 'push' &&
+          github.ref_name == 'main' &&
+          vars.AWS_REGION != ''
+        env:
+          GH_TOKEN: ${{ secrets.OPS_REPO_DISPATCH_TOKEN }}
+          DEPLOY_ENVIRONMENT: ${{ vars.DEPLOY_ENVIRONMENT }}
+          IMAGE_TAG: sha-${{ github.sha }}
+        run: |
+          if [ -z "${GH_TOKEN}" ]; then
+            echo "OPS_REPO_DISPATCH_TOKEN is not configured; skipping."
+            exit 0
+          fi
+
+          ENVIRONMENT="${DEPLOY_ENVIRONMENT:-dev}"
+          gh api "repos/${OPS_REPO}/dispatches" \
+            --method POST \
+            --field event_type=promote-image \
+            --raw-field client_payload="$(
+              printf '{"team":"%s","application":"%s","environment":"%s","image_tag":"%s"}' \
+                "${OPS_TEAM}" \
+                "${OPS_APPLICATION}" \
+                "${ENVIRONMENT}" \
+                "${IMAGE_TAG}"
+            )"
