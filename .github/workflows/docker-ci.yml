@@ -5,11 +5,9 @@ name: Docker CI
   push:
     branches:
       - main
-      - first-copy
   pull_request:
     branches:
       - main
-      - first-copy
 
 permissions:
   contents: read
