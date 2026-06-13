@@ -21,6 +21,8 @@ env:
   IMAGE_NAME: ${{ github.repository }}
   ECR_REPOSITORY: ssvd-bhoomi-report
   OPS_REPO: sruthishtechnologies/ssvd-ops-repo
+  OPS_TEAM: srisatvam
+  OPS_APPLICATION: bhoomi-report
 
 jobs:
   quality:
@@ -188,7 +190,9 @@ jobs:
             --method POST \
             --field event_type=promote-image \
             --raw-field client_payload="$(
-              printf '{"environment":"%s","image_tag":"%s"}' \
+              printf '{"team":"%s","application":"%s","environment":"%s","image_tag":"%s"}' \
+                "${OPS_TEAM}" \
+                "${OPS_APPLICATION}" \
                 "${ENVIRONMENT}" \
                 "${IMAGE_TAG}"
             )"
