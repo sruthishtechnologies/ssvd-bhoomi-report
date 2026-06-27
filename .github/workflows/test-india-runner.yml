@@ -1,0 +1,20 @@
+# .github/workflows/test-india-runner.yml
+name: Test India Runner
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "requests/**"
+
+jobs:
+  test:
+    runs-on: [self-hosted, india, bhoomi]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Show runner location
+        run: |
+          echo "Running on self-hosted laptop"
+          curl https://ipinfo.io
